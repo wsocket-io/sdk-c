@@ -43,7 +43,7 @@ void on_message(const char *data, wsocket_meta_t *meta, void *userdata) {
 }
 
 int main() {
-    wsocket_client_t *client = wsocket_create("wss://your-server.com", "your-api-key", NULL);
+    wsocket_client_t *client = wsocket_create("wss://node00.wsocket.online", "your-api-key", NULL);
 
     wsocket_connect(client);
 
@@ -85,7 +85,7 @@ wsocket_history(ch, 50, on_history, NULL);
 ## Push Notifications
 
 ```c
-wsocket_push_t *push = wsocket_push_create("https://your-server.com", "secret", "app1");
+wsocket_push_t *push = wsocket_push_create("https://node00.wsocket.online", "secret", "app1");
 
 wsocket_push_register_fcm(push, "device-token", "user-123");
 wsocket_push_send(push, "user-123", "{\"title\":\"Hello\",\"body\":\"World\"}");
