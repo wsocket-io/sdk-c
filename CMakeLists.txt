@@ -10,7 +10,6 @@ pkg_check_modules(CURL REQUIRED libcurl)
 
 add_library(wsocket_io
     src/wsocket.c
-    src/cJSON.c
 )
 
 target_include_directories(wsocket_io
