@@ -182,6 +182,19 @@ int wsocket_push_unregister(wsocket_push_t *push, const char *member_id, const c
 /** Delete a specific push subscription by its ID. */
 int wsocket_push_delete_subscription(wsocket_push_t *push, const char *subscription_id);
 
+/** Add a channel to a push subscription. */
+int wsocket_push_add_channel(wsocket_push_t *push, const char *subscription_id, const char *channel);
+
+/** Remove a channel from a push subscription. */
+int wsocket_push_remove_channel(wsocket_push_t *push, const char *subscription_id, const char *channel);
+
+/** Get the VAPID public key. Returns 0 on success, writes response to out_buf. */
+int wsocket_push_get_vapid_key(wsocket_push_t *push, char *out_buf, size_t buf_size);
+
+/** List push subscriptions for a member. Returns 0 on success, writes JSON to out_buf. */
+int wsocket_push_list_subscriptions(wsocket_push_t *push, const char *member_id,
+                                     char *out_buf, size_t buf_size);
+
 #ifdef __cplusplus
 }
 #endif

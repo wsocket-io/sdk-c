@@ -307,6 +307,37 @@ void wsocket_push_destroy(wsocket_push_t *push) {
     free(push);
 }
 
+/* ─── Response buffer for GET requests ───────────────────── */
+
+typedef struct {
+    char *data;
+    size_t size;
+} response_buf_t;
+
+static size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
+    size_t total = size * nmemb;
+    response_buf_t *buf = (response_buf_t *)userp;
+    char *tmp = (char *)realloc(buf->data, buf->size + total + 1);
+    if (!tmp) return 0;
+    buf->data = tmp;
+    memcpy(buf->data + buf->size, contents, total);
+    buf->size += total;
+    buf->data[buf->size] = '\0';
+    return total;
+}
+
+static struct curl_slist *push_headers(wsocket_push_t *push) {
+    struct curl_slist *headers = NULL;
+    char auth_header[600];
+    char app_header[300];
+    snprintf(auth_header, sizeof(auth_header), "Authorization: Bearer %s", push->token);
+    snprintf(app_header, sizeof(app_header), "X-App-Id: %s", push->app_id);
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+    headers = curl_slist_append(headers, auth_header);
+    headers = curl_slist_append(headers, app_header);
+    return headers;
+}
+
 static int push_post(wsocket_push_t *push, const char *path, const char *body) {
     if (!push || !path || !body) return -1;
 
@@ -316,17 +347,7 @@ static int push_post(wsocket_push_t *push, const char *path, const char *body) {
     char url[1024];
     snprintf(url, sizeof(url), "%s/api/push/%s", push->base_url, path);
 
-    char auth[512];
-    snprintf(auth, sizeof(auth), "Bearer %s", push->token);
-
-    struct curl_slist *headers = NULL;
-    headers = curl_slist_append(headers, "Content-Type: application/json");
-    char auth_header[600];
-    snprintf(auth_header, sizeof(auth_header), "Authorization: %s", auth);
-    headers = curl_slist_append(headers, auth_header);
-    char app_header[300];
-    snprintf(app_header, sizeof(app_header), "X-App-Id: %s", push->app_id);
-    headers = curl_slist_append(headers, app_header);
+    struct curl_slist *headers = push_headers(push);
 
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
@@ -334,6 +355,36 @@ static int push_post(wsocket_push_t *push, const char *path, const char *body) {
 
     CURLcode res = curl_easy_perform(curl);
 
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+
+    return (res == CURLE_OK) ? 0 : -1;
+}
+
+static int push_request(wsocket_push_t *push, const char *method, const char *full_url,
+                        char *out_buf, size_t buf_size) {
+    if (!push || !method || !full_url) return -1;
+
+    CURL *curl = curl_easy_init();
+    if (!curl) return -1;
+
+    struct curl_slist *headers = push_headers(push);
+    response_buf_t resp = {NULL, 0};
+
+    curl_easy_setopt(curl, CURLOPT_URL, full_url);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, method);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &resp);
+
+    CURLcode res = curl_easy_perform(curl);
+
+    if (res == CURLE_OK && out_buf && buf_size > 0 && resp.data) {
+        strncpy(out_buf, resp.data, buf_size - 1);
+        out_buf[buf_size - 1] = '\0';
+    }
+
+    free(resp.data);
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
 
@@ -381,7 +432,37 @@ int wsocket_push_unregister(wsocket_push_t *push, const char *member_id, const c
 }
 
 int wsocket_push_delete_subscription(wsocket_push_t *push, const char *subscription_id) {
+    if (!push || !subscription_id) return -1;
+    char url[1024];
+    snprintf(url, sizeof(url), "%s/api/push/subscriptions/%s", push->base_url, subscription_id);
+    return push_request(push, "DELETE", url, NULL, 0);
+}
+
+int wsocket_push_add_channel(wsocket_push_t *push, const char *subscription_id, const char *channel) {
+    if (!push || !subscription_id || !channel) return -1;
     char body[1024];
-    snprintf(body, sizeof(body), "{\"subscriptionId\":\"%s\"}", subscription_id);
-    return push_post(push, "unregister", body);
+    snprintf(body, sizeof(body), "{\"subscriptionId\":\"%s\",\"channel\":\"%s\"}", subscription_id, channel);
+    return push_post(push, "channels/add", body);
+}
+
+int wsocket_push_remove_channel(wsocket_push_t *push, const char *subscription_id, const char *channel) {
+    if (!push || !subscription_id || !channel) return -1;
+    char body[1024];
+    snprintf(body, sizeof(body), "{\"subscriptionId\":\"%s\",\"channel\":\"%s\"}", subscription_id, channel);
+    return push_post(push, "channels/remove", body);
+}
+
+int wsocket_push_get_vapid_key(wsocket_push_t *push, char *out_buf, size_t buf_size) {
+    if (!push || !out_buf || buf_size == 0) return -1;
+    char url[1024];
+    snprintf(url, sizeof(url), "%s/api/push/vapid-key", push->base_url);
+    return push_request(push, "GET", url, out_buf, buf_size);
+}
+
+int wsocket_push_list_subscriptions(wsocket_push_t *push, const char *member_id,
+                                     char *out_buf, size_t buf_size) {
+    if (!push || !member_id || !out_buf || buf_size == 0) return -1;
+    char url[1024];
+    snprintf(url, sizeof(url), "%s/api/push/subscriptions?memberId=%s", push->base_url, member_id);
+    return push_request(push, "GET", url, out_buf, buf_size);
 }
