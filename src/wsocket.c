@@ -379,3 +379,9 @@ int wsocket_push_unregister(wsocket_push_t *push, const char *member_id, const c
     }
     return push_post(push, "unregister", body);
 }
+
+int wsocket_push_delete_subscription(wsocket_push_t *push, const char *subscription_id) {
+    char body[1024];
+    snprintf(body, sizeof(body), "{\"subscriptionId\":\"%s\"}", subscription_id);
+    return push_post(push, "unregister", body);
+}

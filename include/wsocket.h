@@ -179,6 +179,9 @@ int wsocket_push_broadcast(wsocket_push_t *push, const char *payload);
 /** Unregister a member's device. platform can be NULL. */
 int wsocket_push_unregister(wsocket_push_t *push, const char *member_id, const char *platform);
 
+/** Delete a specific push subscription by its ID. */
+int wsocket_push_delete_subscription(wsocket_push_t *push, const char *subscription_id);
+
 #ifdef __cplusplus
 }
 #endif
