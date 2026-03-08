@@ -94,6 +94,18 @@ wsocket_push_register_fcm(push, "device-token", "user-123");
 wsocket_push_send(push, "user-123", "{\"title\":\"Hello\",\"body\":\"World\"}");
 wsocket_push_broadcast(push, "{\"title\":\"News\",\"body\":\"Update\"}");
 
+// Channel targeting
+wsocket_push_add_channel(push, "subscription-id", "alerts");
+wsocket_push_remove_channel(push, "subscription-id", "alerts");
+
+// VAPID key
+char vapid_key[512];
+wsocket_push_get_vapid_key(push, vapid_key, sizeof(vapid_key));
+
+// List subscriptions
+char subs[4096];
+wsocket_push_list_subscriptions(push, "user-123", subs, sizeof(subs));
+
 wsocket_push_destroy(push);
 ```
 
