@@ -441,14 +441,14 @@ int wsocket_push_delete_subscription(wsocket_push_t *push, const char *subscript
 int wsocket_push_add_channel(wsocket_push_t *push, const char *subscription_id, const char *channel) {
     if (!push || !subscription_id || !channel) return -1;
     char body[1024];
-    snprintf(body, sizeof(body), "{\"subscriptionId\":\"%s\",\"channel\":\"%s\"}", subscription_id, channel);
+    snprintf(body, sizeof(body), "{\"memberId\":\"%s\",\"channel\":\"%s\"}", subscription_id, channel);
     return push_post(push, "channels/add", body);
 }
 
 int wsocket_push_remove_channel(wsocket_push_t *push, const char *subscription_id, const char *channel) {
     if (!push || !subscription_id || !channel) return -1;
     char body[1024];
-    snprintf(body, sizeof(body), "{\"subscriptionId\":\"%s\",\"channel\":\"%s\"}", subscription_id, channel);
+    snprintf(body, sizeof(body), "{\"memberId\":\"%s\",\"channel\":\"%s\"}", subscription_id, channel);
     return push_post(push, "channels/remove", body);
 }
 
